@@ -7,6 +7,7 @@ from typing import Any
 
 from .i18n import format_date, format_time, text
 from .settings import ensure_visible_position, load_settings, save_settings
+from .displays import monitor_work_areas, move_window
 
 
 WINDOW_WIDTH = 360
@@ -101,19 +102,31 @@ class ClockApplication:
         self.apply_theme()
         self.place_window()
         self.tick()
+        self.monitor_areas = monitor_work_areas(root)
+        self.monitor_job = root.after(2000, self.check_displays)
 
     def place_window(self) -> None:
         self.root.update_idletasks()
         saved = self.settings["window"]
         if saved["x"] is None or saved["y"] is None:
-            bounds = virtual_desktop_bounds(self.root)
+            bounds = monitor_work_areas(self.root)[0]
             x = bounds[0] + (bounds[2] - WINDOW_WIDTH) // 2
             y = bounds[1] + (bounds[3] - WINDOW_HEIGHT) // 2
         else:
             x, y = ensure_visible_position(
-                saved["x"], saved["y"], WINDOW_WIDTH, WINDOW_HEIGHT, virtual_desktop_bounds(self.root)
+                saved["x"], saved["y"], WINDOW_WIDTH, WINDOW_HEIGHT, monitor_work_areas(self.root)
             )
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}{x:+d}{y:+d}")
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        move_window(self.root, x, y)
+
+    def check_displays(self):
+        areas = monitor_work_areas(self.root)
+        if areas != self.monitor_areas and self.drag_origin is None:
+            x, y = ensure_visible_position(self.root.winfo_x(), self.root.winfo_y(),
+                                           WINDOW_WIDTH, WINDOW_HEIGHT, areas)
+            move_window(self.root, x, y)
+            self.monitor_areas = areas
+        self.monitor_job = self.root.after(2000, self.check_displays)
 
     def tick(self) -> None:
         now = datetime.now()
@@ -137,11 +150,14 @@ class ClockApplication:
         start_x, start_y, window_x, window_y = self.drag_origin
         x = window_x + event.x_root - start_x
         y = window_y + event.y_root - start_y
-        self.root.geometry(f"{x:+d}{y:+d}")
+        move_window(self.root, x, y)
 
     def finish_drag(self, _event: tk.Event) -> None:
         self.drag_origin = None
-        self.settings["window"] = {"x": self.root.winfo_x(), "y": self.root.winfo_y()}
+        x, y = ensure_visible_position(self.root.winfo_x(), self.root.winfo_y(),
+                                       WINDOW_WIDTH, WINDOW_HEIGHT, monitor_work_areas(self.root))
+        move_window(self.root, x, y)
+        self.settings["window"] = {"x": x, "y": y}
         save_settings(self.settings)
 
     def set_value(self, key: str, value: Any) -> None:
@@ -205,13 +221,31 @@ class ClockApplication:
         save_settings(self.settings)
         if self.update_job is not None:
             self.root.after_cancel(self.update_job)
+        self.root.after_cancel(self.monitor_job)
         self.root.destroy()
 
 
 def smoke_test() -> None:
     sample = datetime(2026, 11, 25, 13, 5, 9)
-    assert format_time(sample, "24h") == "13:05:09"
-    assert "2026" in format_date(sample, "en")
+    if format_time(sample, "24h") != "13:05:09" or "2026" not in format_date(sample, "en"):
+        raise RuntimeError("Clock formatting failed")
+    root = tk.Tk()
+    try:
+        app = ClockApplication(root)
+        root.update()
+        if not root.winfo_viewable():
+            raise RuntimeError("Clock window is not mapped")
+        for theme in ("light", "dark"):
+            app.settings["theme"] = theme
+            app.apply_theme()
+        for language in ("en", "zh-CN"):
+            app.settings["language"] = language
+            app.tick_now()
+        root.update()
+        if not app.canvas.itemcget(app.time_item, "text"):
+            raise RuntimeError("Clock did not render")
+    finally:
+        root.destroy()
 
 
 def main() -> None:

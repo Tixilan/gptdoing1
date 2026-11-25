@@ -6,12 +6,12 @@
 
 ## 下载与使用 / Download
 
-1. 从 [最新版本页面](https://github.com/Tixilan/gptdoing1/releases/latest) 下载 `DesktopClock-v1.0.0-windows-x64.exe`。
+1. 从 [最新版本页面](https://github.com/Tixilan/gptdoing1/releases/latest) 下载 `DesktopClock-v1.0.1-windows-x64.exe`。
 2. 双击运行，无需安装 Python。拖动窗口可以改变位置，右键窗口打开设置菜单。
 3. 如需验证文件完整性，可同时下载 `.sha256` 文件并在 PowerShell 中运行：
 
    ```powershell
-   Get-FileHash .\DesktopClock-v1.0.0-windows-x64.exe -Algorithm SHA256
+   Get-FileHash .\DesktopClock-v1.0.1-windows-x64.exe -Algorithm SHA256
    ```
 
 Download the executable from the [latest release](https://github.com/Tixilan/gptdoing1/releases/latest), run it directly, drag to reposition, and right-click for settings. Python is not required.
@@ -55,7 +55,15 @@ python tools/generate_icon.py
 pyinstaller --clean --noconfirm DesktopClock.spec
 ```
 
-输出文件位于 `dist\DesktopClock.exe`。GitHub Actions 会在 `main` 分支更新时自动测试、打包并更新 v1.0.0 Release。
+输出文件位于 `dist\DesktopClock.exe`。普通 `main` 推送只测试和构建；推送匹配程序版本的 `v*` 标签才发布独立 Release，已有资产不会覆盖。例如版本为 `1.0.1` 时推送 `v1.0.1`。也可在对应标签上手动运行工作流。
+
+Main pushes only test/build. Push a matching version tag (for example `v1.0.1`) to publish an immutable release. Manual workflow dispatch must select the tag. Update the package version and Windows version resource together before tagging.
+
+## v1.0.1 修复 / Changes
+
+- 根据真实显示器工作区域恢复窗口，支持负坐标和屏幕断开后自动恢复。Restore within actual monitor work areas, including negative coordinates and disconnected screens.
+- 测试会创建真实 Tk 窗口并验证渲染与主题切换。Smoke tests now exercise a real Tk window.
+- 发布按版本标签进行，保留历史二进制；Actions 固定到完整提交。Tagged releases preserve historical assets; Actions are pinned to commits.
 
 ## 快捷操作 / Controls
 

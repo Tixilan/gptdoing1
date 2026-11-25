@@ -13,6 +13,17 @@ from desktop_clock.settings import (
 
 
 class SettingsTests(unittest.TestCase):
+    def test_gap_between_monitors_is_not_visible(self):
+        monitors = [(0, 0, 1920, 1080), (1920, 1080, 1920, 1080)]
+        self.assertEqual(ensure_visible_position(2200, 100, 360, 160, monitors), (1560, 100))
+
+    def test_negative_monitor_position_is_preserved(self):
+        monitors = [(0, 0, 1920, 1080), (-1920, 0, 1920, 1080)]
+        self.assertEqual(ensure_visible_position(-1200, 200, 360, 160, monitors), (-1200, 200))
+
+    def test_disconnected_monitor_returns_to_screen(self):
+        self.assertEqual(ensure_visible_position(2500, 200, 360, 160, [(0, 0, 1920, 1080)]), (1560, 200))
+
     @patch("desktop_clock.settings.default_language", return_value="en")
     def test_invalid_values_use_defaults(self, _language) -> None:
         value = normalize_settings({

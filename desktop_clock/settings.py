@@ -79,10 +79,24 @@ def ensure_visible_position(
     y: int,
     width: int,
     height: int,
-    desktop: tuple[int, int, int, int],
+    desktop: tuple[int, int, int, int] | list[tuple[int, int, int, int]],
     visible_margin: int = 80,
 ) -> tuple[int, int]:
     """Keep at least part of the clock inside the virtual desktop bounds."""
+    if isinstance(desktop, list):
+        if not desktop:
+            raise ValueError("At least one monitor is required")
+        for left, top, mw, mh in desktop:
+            overlap_x = min(x + width, left + mw) - max(x, left)
+            overlap_y = min(y + height, top + mh) - max(y, top)
+            if overlap_x >= min(visible_margin, width) and overlap_y >= min(visible_margin, height):
+                return x, y
+        candidates = [
+            (min(max(x, left), left + max(0, mw - width)),
+             min(max(y, top), top + max(0, mh - height)))
+            for left, top, mw, mh in desktop
+        ]
+        return min(candidates, key=lambda p: (p[0] - x) ** 2 + (p[1] - y) ** 2)
     left, top, desktop_width, desktop_height = desktop
     right = left + desktop_width
     bottom = top + desktop_height

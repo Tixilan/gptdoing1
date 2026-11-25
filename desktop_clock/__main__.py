@@ -8,7 +8,7 @@ def cli() -> int:
     parser.add_argument(
         "--smoke-test",
         action="store_true",
-        help="verify the packaged application without opening a window",
+        help="briefly create and verify a real clock window, then exit",
     )
     args = parser.parse_args()
     if args.smoke_test:
