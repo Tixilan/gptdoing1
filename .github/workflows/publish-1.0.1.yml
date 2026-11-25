@@ -18,10 +18,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          existing=$(gh api "repos/$GH_REPO/git/ref/tags/v1.0.1" --jq '.object.sha' 2>/dev/null || true)
+          existing=$(gh api "repos/$GH_REPO/git/ref/tags/v1.0.1" --jq '.object.sha' 2>/dev/null) || existing=''
           if [ -n "$existing" ]; then
             test "$existing" = "$TESTED_SHA"
           else
             gh api "repos/$GH_REPO/git/refs" -f ref=refs/tags/v1.0.1 -f sha="$TESTED_SHA"
           fi
           gh workflow run release.yml --ref v1.0.1
+
